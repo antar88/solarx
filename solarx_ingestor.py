@@ -26,9 +26,9 @@ elif data.get('success') == False:
 
 # Database connection parameters
 db_host = 'localhost'
-db_user = os.getenv('SOLARX_DB_USER'),
-db_password = os.getenv('SOLARX_DB_PASSWORD'),
-db_name = os.getenv('SOLARX_DB'),
+db_user = os.getenv('SOLARX_DB_USER')
+db_password = os.getenv('SOLARX_DB_PASSWORD')
+db_name = os.getenv('SOLARX_DB')
 
 try:
     # Connect to the database
@@ -90,7 +90,8 @@ try:
     # Close the connection
     cursor.close()
     connection.close()
-
+    print("Data ingested to the DDBB")
+    
 except pymysql.Error as e:
     print(f"An error occurred while executing the SQL query: {e}")
     print(sql)
