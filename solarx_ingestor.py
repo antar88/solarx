@@ -1,98 +1,91 @@
-import requests
 import os
+import sys
+import logging
+import requests
 import pymysql
+from datetime import datetime
 
-url     = 'https://global.solaxcloud.com/proxyApp/proxy/api/getRealtimeInfo.do'
-params  = {
-    'tokenId': os.getenv('SOLARX_API_TOKEN'),
-    'sn': os.getenv('SOLARX_API_SN')
-}
+logging.basicConfig(
+    filename='/var/log/solarx_ingestor.log',
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s'
+)
 
-data = None
-response = requests.get(url, params=params)
-if response.status_code == 200:
-    data = response.json()
-    print(data)
-else:
-    print(f"Failed to fetch data: {response.status_code}")
-    exit(1)
+API_URL = 'https://global.solaxcloud.com/api/v2/dataAccess/realtimeInfo/get'
+TOKEN   = os.getenv('SOLARX_API_TOKEN')
+WIFI_SN = os.getenv('SOLARX_API_SN')
 
-if not data:
-    print(f"Empty data returned from API.")
-    exit(1)
-elif data.get('success') == False:
-    print(f"Api returned an exception: {data.get('exception')}")
-    exit(1)
-
-# Database connection parameters
-db_host = 'localhost'
-db_user = os.getenv('SOLARX_DB_USER')
-db_password = os.getenv('SOLARX_DB_PASSWORD')
-db_name = os.getenv('SOLARX_DB')
+if not TOKEN or not WIFI_SN:
+    logging.error('Missing SOLARX_API_TOKEN or SOLARX_API_SN env vars')
+    sys.exit(1)
 
 try:
-    # Connect to the database
-    connection = pymysql.connect(host=db_host, user=db_user, password=db_password, database=db_name)
-    cursor = connection.cursor()
+    response = requests.post(
+        API_URL,
+        headers={'tokenId': TOKEN, 'Content-Type': 'application/json'},
+        json={'wifiSn': WIFI_SN},
+        timeout=15
+    )
+    response.raise_for_status()
+    data = response.json()
+except requests.RequestException as e:
+    logging.error(f'API request failed: {e}')
+    sys.exit(1)
 
-    sql = """INSERT INTO inverter_data (
-        inverterSN,
-        sn,
-        acpower,
-        yieldtoday,
-        yieldtotal,
-        feedinpower,
-        feedinenergy,
-        consumeenergy,
-        feedinpowerM2,
-        soc,
-        peps1,
-        peps2,
-        peps3,
-        inverterType,
-        inverterStatus,
-        uploadTime,
-        batPower,
-        powerdc1,
-        powerdc2,
-        powerdc3,
-        powerdc4) 
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+if not data.get('success'):
+    logging.error(f'API error: {data.get("exception")} (code {data.get("code")})')
+    sys.exit(1)
 
-    inverter_data = data.get('result')
-    cursor.execute(sql, (
-        inverter_data.get('inverterSN'),
-        inverter_data.get('sn'),
-        inverter_data.get('acpower'),
-        inverter_data.get('yieldtoday'),
-        inverter_data.get('yieldtotal'),
-        inverter_data.get('feedinpower'),
-        inverter_data.get('feedinenergy'),
-        inverter_data.get('consumeenergy'),
-        inverter_data.get('feedinpowerM2'),
-        inverter_data.get('soc'),
-        inverter_data.get('peps1'),
-        inverter_data.get('peps2'),
-        inverter_data.get('peps3'),
-        inverter_data.get('inverterType'),
-        inverter_data.get('inverterStatus'),
-        inverter_data.get('uploadTime'),
-        inverter_data.get('batPower'),
-        inverter_data.get('powerdc1'),
-        inverter_data.get('powerdc2'),
-        inverter_data.get('powerdc3'),
-        inverter_data.get('powerdc4')
-    ))
+r = data.get('result', {})
+if not r:
+    logging.warning('API returned empty result')
+    sys.exit(0)
 
-    # Commit the transaction
-    connection.commit()
+try:
+    connection = pymysql.connect(
+        host='localhost',
+        user=os.getenv('SOLARX_DB_USER'),
+        password=os.getenv('SOLARX_DB_PASSWORD'),
+        database=os.getenv('SOLARX_DB'),
+        connect_timeout=10
+    )
+    with connection:
+        with connection.cursor() as cursor:
+            sql = """
+                INSERT IGNORE INTO inverter_data (
+                    inverterSN, sn, acpower, yieldtoday, yieldtotal,
+                    feedinpower, feedinenergy, consumeenergy, feedinpowerM2,
+                    soc, peps1, peps2, peps3, inverterType, inverterStatus,
+                    uploadTime, batPower, powerdc1, powerdc2, powerdc3,
+                    powerdc4, batStatus, utcDateTime
+                ) VALUES (
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s
+                )
+            """
+            utc = r.get('utcDateTime')
+            if utc:
+                utc = datetime.strptime(utc, '%Y-%m-%dT%H:%M:%SZ')
 
-    # Close the connection
-    cursor.close()
-    connection.close()
-    print("Data ingested to the DDBB")
-    
+            affected = cursor.execute(sql, (
+                r.get('inverterSN'), r.get('sn'), r.get('acpower'),
+                r.get('yieldtoday'), r.get('yieldtotal'), r.get('feedinpower'),
+                r.get('feedinenergy'), r.get('consumeenergy'), r.get('feedinpowerM2'),
+                r.get('soc'), r.get('peps1'), r.get('peps2'), r.get('peps3'),
+                r.get('inverterType'), r.get('inverterStatus'), r.get('uploadTime'),
+                r.get('batPower'), r.get('powerdc1'), r.get('powerdc2'),
+                r.get('powerdc3'), r.get('powerdc4'), r.get('batStatus'), utc
+            ))
+        connection.commit()
+
+    if affected:
+        logging.info(f'Saved: uploadTime={r.get("uploadTime")} acpower={r.get("acpower")}W soc={r.get("soc")}%')
+    else:
+        logging.info(f'Skipped duplicate: uploadTime={r.get("uploadTime")}')
+
 except pymysql.Error as e:
-    print(f"An error occurred while executing the SQL query: {e}")
-    print(sql)
-    
+    logging.error(f'Database error: {e}')
+    sys.exit(1)
