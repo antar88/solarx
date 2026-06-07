@@ -1,1 +1,6 @@
 __pycache__/
+.venv/
+*.env
+.env.test
+.pytest_cache/
+.ruff_cache/

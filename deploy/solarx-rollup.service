@@ -1,0 +1,12 @@
+[Unit]
+Description=SolaX daily_yield rollup (recompute recent days)
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/solarx.env
+WorkingDirectory=/var/www/antar88.github.io/apis/solarx
+ExecStart=/var/www/antar88.github.io/apis/solarx/.venv/bin/python -m jobs.rollup_daily --days 35
+User=www-data
+Group=www-data
