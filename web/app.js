@@ -187,6 +187,7 @@ document.querySelectorAll(".chart-toggle button").forEach((btn) => {
 
 async function boot() {
   await Promise.all([loadYear(), loadMonth()]);
+  showDash(); // reveal the dashboard once data has loaded with a valid session
 }
 
 // Try to load (cookie may already be valid); fall back to login.

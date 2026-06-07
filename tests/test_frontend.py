@@ -27,6 +27,35 @@ def test_index_has_year_banner():
     assert 'id="year-banner"' in html
 
 
+def _function_body(js: str, signature: str) -> str:
+    """Return the brace-matched body of a function given its signature prefix."""
+    start = js.index(signature)
+    open_brace = js.index("{", start)
+    depth = 0
+    for i in range(open_brace, len(js)):
+        if js[i] == "{":
+            depth += 1
+        elif js[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return js[open_brace : i + 1]
+    raise AssertionError(f"unbalanced braces after {signature!r}")
+
+
+def test_boot_reveals_dashboard_on_valid_session():
+    # Regression: both views start hidden; the valid-session path must call showDash(),
+    # otherwise a logged-in revisit renders the dashboard invisibly (blank page).
+    js = (WEB / "app.js").read_text()
+    body = _function_body(js, "async function boot")
+    assert "showDash()" in body, "boot() must reveal the dashboard when the session is valid"
+
+
+def test_views_start_hidden_and_have_toggles():
+    # The hidden-by-default contract relies on showLogin()/showDash() existing.
+    js = (WEB / "app.js").read_text()
+    assert "function showLogin()" in js and "function showDash()" in js
+
+
 def test_index_loads_local_assets_not_external_cdn():
     html = (WEB / "index.html").read_text()
     assert "/app.js" in html
