@@ -64,7 +64,36 @@ def test_month_endpoint_returns_series(client, db_conn):
     assert by_day[1]["kwh_last_year"] == 9.0
 
 
+def test_month_endpoint_includes_summary(client, db_conn):
+    seed_daily(db_conn, [("2026-06-01", 10.0)])
+    client.post("/api/login", json={"username": "hantaro88", "password": TEST_PASSWORD})
+    body = client.get("/api/month?year=2026&month=6").json()
+    assert "summary" in body
+    expected = ("is_current_month", "total_kwh", "total_last_year_kwh", "delta_pct", "best_day_kwh")
+    for key in expected:
+        assert key in body["summary"]
+
+
 def test_month_endpoint_validates_params(client):
     client.post("/api/login", json={"username": "hantaro88", "password": TEST_PASSWORD})
     assert client.get("/api/month?year=2026&month=13").status_code == 422
     assert client.get("/api/month?year=1500&month=6").status_code == 422
+
+
+def test_year_endpoint_requires_auth(client):
+    assert client.get("/api/year?year=2026").status_code == 401
+
+
+def test_year_endpoint_returns_comparison(client):
+    client.post("/api/login", json={"username": "hantaro88", "password": TEST_PASSWORD})
+    r = client.get("/api/year?year=2026")
+    assert r.status_code == 200
+    body = r.json()
+    for key in ("year", "is_current_year", "ytd_kwh", "ytd_last_year_kwh", "delta_pct"):
+        assert key in body
+    assert body["year"] == 2026
+
+
+def test_year_endpoint_validates_params(client):
+    client.post("/api/login", json={"username": "hantaro88", "password": TEST_PASSWORD})
+    assert client.get("/api/year?year=1500").status_code == 422

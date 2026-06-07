@@ -103,5 +103,23 @@ def month(
         raise HTTPException(status_code=422, detail="month must be 1..12")
     if not (2000 <= year <= 2100):
         raise HTTPException(status_code=422, detail="year out of range")
+    today = date.today()
     with get_connection(settings) as conn:
-        return {"year": year, "month": month, "days": queries.get_month(conn, year, month)}
+        return {
+            "year": year,
+            "month": month,
+            "days": queries.get_month(conn, year, month, today=today),
+            "summary": queries.get_month_summary(conn, year, month, today),
+        }
+
+
+@app.get("/api/year")
+def year(
+    year: int,
+    user: str = Depends(require_user),
+    settings: Settings = Depends(settings_dep),
+) -> dict:
+    if not (2000 <= year <= 2100):
+        raise HTTPException(status_code=422, detail="year out of range")
+    with get_connection(settings) as conn:
+        return queries.get_year_summary(conn, date.today(), year=year)
