@@ -1,0 +1,23 @@
+[Unit]
+Description=SolaX dashboard API (FastAPI/uvicorn)
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/solarx-api.env
+WorkingDirectory=/var/www/antar88.github.io/apis/solarx
+ExecStart=/var/www/antar88.github.io/apis/solarx/.venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8001
+Restart=on-failure
+RestartSec=3
+User=www-data
+Group=www-data
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=
+
+[Install]
+WantedBy=multi-user.target

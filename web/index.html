@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SolaX Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Login view -->
+  <section id="login-view" class="card hidden">
+    <h1>☀️ SolaX</h1>
+    <form id="login-form">
+      <input id="username" name="username" placeholder="Username" autocomplete="username" required />
+      <input id="password" name="password" type="password" placeholder="Password"
+             autocomplete="current-password" required />
+      <button type="submit">Sign in</button>
+      <p id="login-error" class="error hidden">Invalid credentials</p>
+    </form>
+  </section>
+
+  <!-- Dashboard view -->
+  <main id="dash-view" class="hidden">
+    <header>
+      <h1>☀️ Solar generation</h1>
+      <button id="logout" class="link">Log out</button>
+    </header>
+
+    <section class="cards">
+      <div class="stat"><span class="label">Current power</span><span id="s-power" class="value">–</span></div>
+      <div class="stat"><span class="label">Today</span><span id="s-today" class="value">–</span></div>
+      <div class="stat"><span class="label">Month to date</span><span id="s-mtd" class="value">–</span></div>
+      <div class="stat"><span class="label">vs last year</span><span id="s-delta" class="value">–</span></div>
+    </section>
+
+    <section class="chart-wrap">
+      <div class="chart-header">
+        <button id="prev-month" class="link">‹</button>
+        <h2 id="month-label">–</h2>
+        <button id="next-month" class="link">›</button>
+      </div>
+      <canvas id="month-chart"></canvas>
+    </section>
+  </main>
+
+  <script src="/vendor/chart.umd.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
