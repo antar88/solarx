@@ -26,18 +26,25 @@
       <button id="logout" class="link">Log out</button>
     </header>
 
-    <section class="cards">
-      <div class="stat"><span class="label">Current power</span><span id="s-power" class="value">–</span></div>
-      <div class="stat"><span class="label">Today</span><span id="s-today" class="value">–</span></div>
-      <div class="stat"><span class="label">Month to date</span><span id="s-mtd" class="value">–</span></div>
-      <div class="stat"><span class="label">vs last year</span><span id="s-delta" class="value">–</span></div>
+    <!-- Overall year-to-date comparison (always the current year) -->
+    <section id="year-banner" class="banner">
+      <span class="banner-title" id="year-title">This year so far</span>
+      <span class="banner-body" id="year-body">–</span>
     </section>
+
+    <!-- Month-contextual stat cards (filled by JS) -->
+    <section class="cards" id="cards"></section>
 
     <section class="chart-wrap">
       <div class="chart-header">
-        <button id="prev-month" class="link">‹</button>
-        <h2 id="month-label">–</h2>
-        <button id="next-month" class="link">›</button>
+        <button id="prev-month" class="link" title="Previous month">‹</button>
+        <input type="month" id="month-picker" />
+        <button id="next-month" class="link" title="Next month">›</button>
+        <span class="spacer"></span>
+        <div class="chart-toggle" role="group" aria-label="Chart type">
+          <button data-type="line" class="active">Line</button>
+          <button data-type="bar">Bar</button>
+        </div>
       </div>
       <canvas id="month-chart"></canvas>
     </section>

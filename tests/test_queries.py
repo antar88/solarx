@@ -72,6 +72,77 @@ def test_get_summary_empty_db(db_conn):
     assert summary["delta_pct"] is None
 
 
+def test_get_month_overlays_live_today(db_conn):
+    # daily_yield has a stale value for today; live inverter_data is higher.
+    today = date(2026, 6, 7)
+    seed_daily(db_conn, [("2026-06-07", 5.0)])  # stale rollup value
+    seed_samples(db_conn, [("2026-06-07 16:00:00", 800, 12.3)])  # live, higher
+    series = queries.get_month(db_conn, 2026, 6, today=today)
+    by_day = {d["day"]: d for d in series}
+    assert by_day[7]["kwh_this"] == 12.3  # live value wins for today
+
+
+def test_get_month_summary_current_month(db_conn):
+    today = date(2026, 6, 10)
+    seed_samples(
+        db_conn,
+        [
+            ("2026-06-01 16:00:00", 700, 10.0),
+            ("2026-06-10 08:00:00", 1200, 3.0),
+            ("2026-06-10 16:00:00", 600, 8.0),  # today's peak
+            ("2025-06-01 16:00:00", 700, 9.0),
+            ("2025-06-10 16:00:00", 700, 7.0),
+        ],
+    )
+    s = queries.get_month_summary(db_conn, 2026, 6, today)
+    assert s["is_current_month"] is True
+    assert s["total_kwh"] == 18.0  # 10 + 8 (1st..today)
+    assert s["total_last_year_kwh"] == 16.0  # 9 + 7
+    assert s["delta_pct"] == 12.5  # (18-16)/16*100
+    assert s["today_kwh"] == 8.0
+    assert s["current_power_w"] == 600.0
+    assert s["best_day_kwh"] == 10.0
+
+
+def test_get_month_summary_past_month(db_conn):
+    today = date(2026, 6, 10)
+    # Viewing May 2026 (a past, complete month) vs May 2025.
+    seed_samples(
+        db_conn,
+        [
+            ("2026-05-15 16:00:00", 700, 20.0),
+            ("2026-05-20 16:00:00", 700, 15.0),
+            ("2025-05-15 16:00:00", 700, 18.0),
+        ],
+    )
+    s = queries.get_month_summary(db_conn, 2026, 5, today)
+    assert s["is_current_month"] is False
+    assert s["total_kwh"] == 35.0
+    assert s["total_last_year_kwh"] == 18.0
+    assert s["best_day_kwh"] == 20.0
+    assert s["current_power_w"] is None
+    assert s["today_kwh"] is None
+
+
+def test_get_year_summary_year_to_date(db_conn):
+    today = date(2026, 6, 10)
+    seed_samples(
+        db_conn,
+        [
+            ("2026-03-01 16:00:00", 700, 30.0),
+            ("2026-06-10 16:00:00", 700, 20.0),  # within YTD span
+            ("2025-03-01 16:00:00", 700, 25.0),
+            ("2025-06-10 16:00:00", 700, 15.0),  # within same span last year
+            ("2025-09-01 16:00:00", 700, 99.0),  # AFTER the span -> excluded
+        ],
+    )
+    s = queries.get_year_summary(db_conn, today, year=2026)
+    assert s["is_current_year"] is True
+    assert s["ytd_kwh"] == 50.0
+    assert s["ytd_last_year_kwh"] == 40.0  # 25 + 15, the Sep row excluded
+    assert s["delta_pct"] == 25.0
+
+
 def test_rollup_then_month_endpoint_consistent(db_conn):
     # End-to-end: raw samples -> rollup -> month series.
     seed_samples(
