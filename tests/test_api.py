@@ -97,3 +97,30 @@ def test_year_endpoint_returns_comparison(client):
 def test_year_endpoint_validates_params(client):
     client.post("/api/login", json={"username": "hantaro88", "password": TEST_PASSWORD})
     assert client.get("/api/year?year=1500").status_code == 422
+
+
+def test_v2_endpoints_require_auth(client):
+    for path in ("/api/overview", "/api/performance", "/api/energy-flow", "/api/day"):
+        assert client.get(path).status_code == 401, path
+
+
+def test_overview_endpoint(client):
+    client.post("/api/login", json={"username": "hantaro88", "password": TEST_PASSWORD})
+    body = client.get("/api/overview").json()
+    for key in ("current_power_w", "today_kwh", "pr_30d", "efficiency_30d", "lifetime_kwh"):
+        assert key in body
+
+
+def test_performance_and_energy_flow_endpoints(client):
+    client.post("/api/login", json={"username": "hantaro88", "password": TEST_PASSWORD})
+    perf = client.get("/api/performance").json()
+    assert "monthly" in perf and "degradation" in perf and perf["kwp"] == 3.6
+    flow = client.get("/api/energy-flow").json()
+    assert "last_30_days" in flow and "last_365_days" in flow and "monthly" in flow
+
+
+def test_day_endpoint_validates_date(client):
+    client.post("/api/login", json={"username": "hantaro88", "password": TEST_PASSWORD})
+    assert client.get("/api/day?date=not-a-date").status_code == 422
+    body = client.get("/api/day?date=2025-06-01").json()
+    assert body["date"] == "2025-06-01" and "samples" in body

@@ -14,6 +14,7 @@ def get_connection(settings: Settings) -> Iterator[pymysql.connections.Connectio
     """Yield a short-lived read-only DB connection, always closed afterwards."""
     conn = pymysql.connect(
         host=settings.db_host,
+        port=settings.db_port,
         user=settings.solarx_ro_db_user,
         password=settings.solarx_ro_db_password,
         database=settings.solarx_db,

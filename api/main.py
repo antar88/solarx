@@ -6,10 +6,10 @@ The API binds to localhost and is reached only through nginx. Auth is a single u
 
 from datetime import date
 
-from fastapi import Cookie, Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Cookie, Depends, FastAPI, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
-from api import auth, queries
+from api import auth, insights, queries
 from api.config import Settings, get_settings
 from api.db import get_connection
 
@@ -123,3 +123,46 @@ def year(
         raise HTTPException(status_code=422, detail="year out of range")
     with get_connection(settings) as conn:
         return queries.get_year_summary(conn, date.today(), year=year)
+
+
+@app.get("/api/overview")
+def overview(
+    user: str = Depends(require_user),
+    settings: Settings = Depends(settings_dep),
+) -> dict:
+    with get_connection(settings) as conn:
+        return insights.get_overview(conn, date.today(), settings.system_kwp)
+
+
+@app.get("/api/performance")
+def performance(
+    user: str = Depends(require_user),
+    settings: Settings = Depends(settings_dep),
+) -> dict:
+    with get_connection(settings) as conn:
+        return insights.get_performance(conn, date.today(), settings.system_kwp)
+
+
+@app.get("/api/energy-flow")
+def energy_flow(
+    user: str = Depends(require_user),
+    settings: Settings = Depends(settings_dep),
+) -> dict:
+    with get_connection(settings) as conn:
+        return insights.get_energy_flow(conn, date.today(), settings.system_kwp)
+
+
+@app.get("/api/day")
+def day(
+    date_str: str | None = Query(default=None, alias="date"),
+    user: str = Depends(require_user),
+    settings: Settings = Depends(settings_dep),
+) -> dict:
+    target = date.today()
+    if date_str:
+        try:
+            target = date.fromisoformat(date_str)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="date must be YYYY-MM-DD") from exc
+    with get_connection(settings) as conn:
+        return insights.get_intraday(conn, target)

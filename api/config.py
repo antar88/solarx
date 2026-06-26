@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     solarx_ro_db_password: str = ""
     solarx_db: str = "solarx"
     db_host: str = "localhost"
+    db_port: int = 3306
 
     # Auth
     dash_username: str = "hantaro88"
@@ -21,6 +22,9 @@ class Settings(BaseSettings):
     # Login brute-force protection
     login_max_attempts: int = 5
     login_window_minutes: int = 15
+
+    # Physical system spec — used to compute the Performance Ratio (kWh / (kWp x POA)).
+    system_kwp: float = 3.6
 
 
 def get_settings() -> Settings:

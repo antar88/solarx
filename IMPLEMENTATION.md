@@ -223,7 +223,27 @@ Then:
 - [ ] `.gitignore` excludes `*.env` and venv.
 
 ## Out of scope (future iterations)
-- Open-Meteo irradiance + Performance Ratio (dirt vs degradation).
 - Passkey/WebAuthn login.
-- Lifetime/yearly trend views, self-consumption, battery SoC.
+- Battery SoC (system has no battery); per-string diagnostics (single string).
 ```
+
+---
+
+## v2 — insights & UI (implemented on branch `dashboard-v2`)
+
+Built in phases, each gated by `./check.sh`:
+
+1. **Data foundation** — extended `daily_yield` (efficiency, uptime, peak DC, daily grid
+   export/import as `LAG` deltas of the lifetime counters); new `daily_weather`; migration
+   `sql/03_daily_yield_v2.sql` + `sql/04_daily_weather.sql`; `jobs/fetch_weather.py`
+   (Open-Meteo, stdlib `urllib`, archive + forecast). Migrated and backfilled on prod.
+2. **API** — `api/insights.py` + routes `/api/overview`, `/api/performance`,
+   `/api/energy-flow`, `/api/day`; `system_kwp` setting (3.6).
+3. **UI** — `web/` rewritten as a tabbed SPA (Overview/Health/Energy/Day), dark/light theme,
+   Chart.js, no build step.
+4. **Deploy** — GRANT SELECT on `daily_weather` to `solarx_ro`; add `fetch_weather` to the
+   ingestor container's crontab; restart `solarx-api` (code is mounted read-only).
+
+Key finding: clear-day Performance Ratio shows ~−3%/yr — faster than panel ageing alone,
+pointing to recoverable soiling. PR is only trustworthy on clear/summer days, hence the
+clear-day filter for the degradation metric.
