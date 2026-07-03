@@ -85,8 +85,10 @@ grid metering present):
 - **Energy flows**: self-consumption and self-sufficiency (autarky) over rolling 30/365
   days and per month.
 - **Endpoints**: `/api/overview`, `/api/performance`, `/api/energy-flow`, `/api/day`.
-- **Frontend**: tabbed SPA (Overview / Health / Energy / Day), dark/light, Chart.js, still
-  no build step.
+- **Frontend**: React + Vite + TypeScript + Tailwind + Recharts SPA (in `frontend/`),
+  shadcn-style look, sidebar + mobile tab bar, dark/light theme. Built with Docker node
+  (`npm run build` → `frontend/dist`, served by the solar-web nginx container). Replaced
+  the original no-build Chart.js page after a design review.
 - **Jobs**: `jobs/fetch_weather.py` (Open-Meteo, stdlib only) backfills + nightly-refreshes
   irradiance; scheduled alongside `rollup_daily` in the ingestor container's cron.
 

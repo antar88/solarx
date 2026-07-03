@@ -14,12 +14,12 @@ for the build plan.
 
 ## Layout
 ```
-api/         FastAPI backend (auth + read endpoints)
-jobs/        rollup_daily.py — builds the daily_yield rollup from inverter_data
-web/         static dashboard (HTML + Chart.js, no build step)
-sql/         schema for daily_yield + read-only DB user
+api/         FastAPI backend (auth + read endpoints + analytics)
+jobs/        rollup_daily.py (daily_yield rollup) + fetch_weather.py (Open-Meteo)
+frontend/    React + Vite + TypeScript + Tailwind + Recharts SPA
+sql/         schema for daily_yield/daily_weather + read-only DB user
 deploy/      systemd units, nginx site, setup.sh
-tests/       pytest suite (auth, rollup, queries, API, frontend)
+tests/       pytest suite (auth, rollup, weather, queries, insights, API, frontend contract)
 check.sh     quality gate: ruff lint + format + pytest — run on every change
 ```
 
@@ -44,6 +44,20 @@ uv sync                       # create venv + install deps
 ./check.sh                    # lint + format-check + run all tests
 uv run uvicorn api.main:app --port 8001   # run the API locally
 ```
+
+### Frontend
+Lives in `frontend/` (React + Vite + TS + Tailwind + Recharts). Node isn't installed on
+the server, so npm runs through Docker:
+
+```bash
+cd frontend
+docker run --rm -v "$PWD":/app -w /app node:22-alpine npm install
+docker run --rm -v "$PWD":/app -w /app node:22-alpine npm run build   # -> frontend/dist
+```
+The `solar-web` nginx container serves `frontend/dist` (see the home_server
+docker-compose). After changing frontend code: rebuild — nginx picks up the new files
+immediately (no restart needed). For local dev with hot reload: `npm run dev` (proxies
+`/api` to 127.0.0.1:8001).
 
 Tests use a throwaway MySQL database configured in `.env.test`
 (`TEST_DB_HOST/USER/PASSWORD/NAME`). They build the schema fresh each run.
