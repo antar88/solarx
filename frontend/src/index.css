@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: hsl(0 0% 100%);
+  --card: hsl(0 0% 100% / 0.6);
+  --fg: hsl(240 10% 8%);
+  --muted: hsl(240 4% 46%);
+  --border: hsl(240 6% 90%);
+  --primary: hsl(38 92% 50%);
+  --pos: hsl(142 70% 40%);
+  --neg: hsl(0 72% 51%);
+  --blue: hsl(217 91% 55%);
+}
+
+.dark {
+  --bg: hsl(240 10% 4%);
+  --card: hsl(240 6% 8% / 0.6);
+  --fg: hsl(0 0% 98%);
+  --muted: hsl(240 5% 60%);
+  --border: hsl(240 5% 16%);
+  --primary: hsl(38 95% 55%);
+  --pos: hsl(142 70% 45%);
+  --blue: hsl(217 91% 60%);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-blue: var(--blue);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+
+/* Native date/month pickers follow the theme */
+input[type="date"], input[type="month"] { color-scheme: light; }
+.dark input[type="date"], .dark input[type="month"] { color-scheme: dark; }

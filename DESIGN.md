@@ -69,10 +69,33 @@ nginx  ── /        → static dashboard (HTML + Chart.js)
 - Read-only DB credentials for the API, stored in an env file (mode 600), not in git.
 - Rate-limit the login endpoint.
 
+## v2 — insights & UI overhaul (implemented)
+Driven by what the production data actually supports (single PV string, no battery,
+grid metering present):
+
+- **New rollup data**: `daily_yield` gained `peak_powerdc`, `export_kwh`, `import_kwh`,
+  `self_consumed_kwh`, `avg_efficiency_pct`, `uptime_pct`; new `daily_weather`
+  (Open-Meteo plane-of-array insolation).
+- **Performance Ratio** `PR = energy_kwh / (kWp × POA)`. Daily PR is noisy and can exceed
+  1 on low-irradiance days, so PR is shown aggregated per month, and the **degradation
+  rate** is computed only on **clear days** (POA ≥ 5.5 kWh/m²) using year-over-year
+  matched calendar months — which cancels seasonality and isolates dirt/ageing.
+- **Inverter health**: load-weighted AC/DC efficiency, uptime (% of generating samples
+  in Normal status), peak DC envelope.
+- **Energy flows**: self-consumption and self-sufficiency (autarky) over rolling 30/365
+  days and per month.
+- **Endpoints**: `/api/overview`, `/api/performance`, `/api/energy-flow`, `/api/day`.
+- **Frontend**: React + Vite + TypeScript + Tailwind + Recharts SPA (in `frontend/`),
+  shadcn-style look, sidebar + mobile tab bar, dark/light theme. Built with Docker node
+  (`npm run build` → `frontend/dist`, served by the solar-web nginx container). Replaced
+  the original no-build Chart.js page after a design review.
+- **Jobs**: `jobs/fetch_weather.py` (Open-Meteo, stdlib only) backfills + nightly-refreshes
+  irradiance; scheduled alongside `rollup_daily` in the ingestor container's cron.
+
 ## Deferred (later iterations)
-- v2: Open-Meteo irradiance + Performance Ratio (separate dirt vs degradation vs weather).
 - Passkey/WebAuthn login.
-- More views: lifetime trend, monthly/yearly totals, self-consumption.
+- Calibrate tilt/azimuth by fitting clear-day PR (currently tilt assumed 30°).
+- Fetch Open-Meteo clear-sky irradiance for a true clear-sky index instead of a POA threshold.
 
 ## Open prerequisite
 - DNS: create `solar.antarmf.com` → this server's IP before certbot can issue the cert.
